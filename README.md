@@ -15,6 +15,7 @@ const adjacencyList = {
   'ophelia': ['travis'],
   'silla':   ['humza', 'yervand'],
   'travis':  ['ophelia'],
+  'ursula':  ['travis'],
   'victor':  [],
   'yervand': ['silla'],
 };
