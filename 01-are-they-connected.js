@@ -62,7 +62,6 @@ function areTheyConnected(adjacencyList, startName, endName) {
 }
 
 
-
 /*******************************************************************************
  * Do not change the code after this line.
  */
