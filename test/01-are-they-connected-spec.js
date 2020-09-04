@@ -1,5 +1,10 @@
+
 const { expect } = require('chai');
-const names = Array.from(require('./names'));
+const adjacencyList = require('./small-graph');
+const expectedResults = require('./small-results');
+const largeAdjacencyList = require('./large-graph');
+const largeExpectedResults = require('./large-results');
+const assert = require('assert')
 
 let areTheyConnected = () => {
   throw new Error('Could not load areTheyConnected');
@@ -13,214 +18,105 @@ function randomNamesIndex() {
   return Math.floor(Math.random() * names.length);
 }
 
-function randomName(not) {
-  if (!Array.isArray(not)) not = [not];
-  let name = names[randomNamesIndex()];
-  while (not.includes(name)) {
-    name = names[randomNamesIndex()];
-  }
-  return name;
-}
-
 describe('areTheyConnected()', () => {
-  context('returns false when', () => {
-    it('the list of people for startName is empty', () => {
-      const startName = randomName();
-      const endName = randomName(startName);
-      const adjacencyList = { [startName]: [], [endName]: [startName] };
 
-      const result = areTheyConnected(adjacencyList, startName, endName);
 
-      expect(result).to.be.false;
-    });
+  context('completes a valid breadth-first search on a small graph', () => {
 
-    it('the entry for startName points to other nodes that are empty', () => {
-      const upperBound = randomNamesIndex() % 20;
-      const adjacencyList = {};
-      const otherNames = [];
-      for (let i = 0; i < upperBound; i += 1) {
-        const otherName = randomName([otherNames]);
-        otherNames.push(otherName);
-        adjacencyList[otherName] = [];
-      }
-      const startName = randomName(otherNames);
-      adjacencyList[startName] = otherNames;
-      const endName = randomName([startName, ...otherNames]);
-      adjacencyList[endName] = [startName, ...otherNames];
+    for (let i = 0 ; i < expectedResults.length ; i++) {
+      let expectedResult = expectedResults[i];
+      let startName = expectedResult.startName;
+      let endName = expectedResult.endName;
+      let expectedVisitation = expectedResult.visited;
 
-      const result = areTheyConnected(adjacencyList, startName, endName);
 
-      expect(result).to.be.false;
-    });
+      it(`from ${startName} to ${endName}`, () => {
 
-    it('the entry for startName points a long path that never finds endName', () => {
-      const adjacencyList = {};
-      let startName;
-      const endName = randomName();
-      for (let i = 0; i < names.length; i += 1) {
-        const name = names[i];
-        const nextName = names[(i + 1) % names.length];
-        if (nextName === endName) {
-          adjacencyList[name] = [];
-        } else {
-          adjacencyList[name] = [nextName];
+
+        const result = areTheyConnected(adjacencyList, startName, endName);
+        let outOfPlace = []
+        for (let i = 0 ; i < expectedVisitation.length ; i++) {
+
+          if (result.has(expectedVisitation[i])) continue;
+
+          outOfPlace = expectedVisitation[i];
+          break;
         }
-        if (name === endName) {
-          startName = nextName;
-        }
-      }
-      const result = areTheyConnected(adjacencyList, startName, endName);
 
-      expect(result).to.be.false;
+        expect(result instanceof Set, true, 'Should return a set containing visited names.');
+        expect(result.size).to.equal(expectedVisitation.length, `Traversal from ${startName} to ${endName} should visit ${result.size} names`);
+        expect(outOfPlace.length).to.equal(0, `Traversal from ${startName} to ${endName} should visit ${outOfPlace}`);
+
+      });
+
+    }
+
+
+  });
+
+  context('returns null for unreachable paths on a small graph', () => {
+    it(`returns null from ophelia to ursula`, () => {
+
+      const result = areTheyConnected(adjacencyList, "ophelia", "ursula");
+
+      expect(result).to.equal(null, `Traversal from ophelia to ursula should return null`);
+
     });
   });
 
-  context('returns true when', () => {
-    it('startName === endName', () => {
-      const startName = randomName();
-      const endName = startName;
-      const adjacencyList = { [startName]: [] };
 
-      const result = areTheyConnected(adjacencyList, startName, endName);
 
-      expect(result).to.be.true;
-    });
+  context('completes a valid breadth-first search on a large graph', () => {
 
-    it('it finds the path startName -> endName', () => {
-      const startName = randomName();
-      const endName = randomName(startName);
-      const adjacencyList = { [startName]: [endName], [endName]: [] };
+    for (let i = 0 ; i < largeExpectedResults.length ; i++) {
+      let expectedResult = largeExpectedResults[i];
+      let startName = expectedResult.startName;
+      let endName = expectedResult.endName;
+      let expectedVisitation = expectedResult.visited;
 
-      const result = areTheyConnected(adjacencyList, startName, endName);
 
-      expect(result).to.be.true;
-    });
+      it(`from ${startName} to ${endName}`, () => {
 
-    it('it finds the path startName -> endName despite a cycle', () => {
-      const startName = randomName();
-      const endName = randomName(startName);
-      const adjacencyList = { [startName]: [endName], [endName]: [startName] };
 
-      const result = areTheyConnected(adjacencyList, startName, endName);
+        const result = areTheyConnected(largeAdjacencyList, startName, endName);
+        let outOfPlace = []
+        for (let i = 0 ; i < expectedVisitation.length ; i++) {
 
-      expect(result).to.be.true;
-    });
+          if (result.has(expectedVisitation[i])) continue;
 
-    it('it finds the path startName -> other -> endName', () => {
-      const startName = randomName();
-      const endName = randomName(startName);
-      const otherName = randomName([startName, endName]);
-      const adjacencyList = {
-        [startName]: [otherName],
-        [otherName]: [endName],
-        [endName]: [otherName, startName]
-      };
-
-      const result = areTheyConnected(adjacencyList, startName, endName);
-
-      expect(result).to.be.true;
-    });
-
-    it('it finds the path startName -> other -> endName despite of a cycle', () => {
-      const startName = randomName();
-      const endName = randomName(startName);
-      const otherName = randomName([startName, endName]);
-      const adjacencyList = {
-        [startName]: [otherName],
-        [otherName]: [startName, endName],
-        [endName]: [otherName, startName]
-      };
-
-      const result = areTheyConnected(adjacencyList, startName, endName);
-
-      expect(result).to.be.true;
-    });
-
-    it('it finds the path startName -> other -> another -> endName', () => {
-      const startName = randomName();
-      const endName = randomName(startName);
-      const otherName = randomName([startName, endName]);
-      const anotherName = randomName([startName, otherName, endName]);
-      const adjacencyList = {
-        [startName]: [otherName],
-        [otherName]: [anotherName],
-        [anotherName]: [endName],
-        [endName]: [otherName, startName]
-      };
-
-      const result = areTheyConnected(adjacencyList, startName, endName);
-
-      expect(result).to.be.true;
-    });
-
-    it('it finds the path startName -> other -> another -> endName despite many cycles', () => {
-      const startName = randomName();
-      const endName = randomName(startName);
-      const otherName = randomName([startName, endName]);
-      const anotherName = randomName([startName, otherName, endName]);
-      const adjacencyList = {
-        [startName]: [otherName],
-        [otherName]: [startName, anotherName],
-        [anotherName]: [startName, otherName, endName],
-        [endName]: [otherName, startName]
-      };
-
-      const result = areTheyConnected(adjacencyList, startName, endName);
-
-      expect(result).to.be.true;
-    });
-
-    it('the finds the path startName -> all other names -> endName', () => {
-      const adjacencyList = {};
-      let startName;
-      const endName = randomName();
-      for (let i = 0; i < names.length; i += 1) {
-        const name = names[i];
-        const nextName = names[(i + 1) % names.length];
-        adjacencyList[name] = [nextName];
-        if (name === endName) {
-          startName = nextName;
+          outOfPlace = expectedVisitation[i];
+          break;
         }
-      }
 
-      const result = areTheyConnected(adjacencyList, startName, endName);
+        expect(result instanceof Set, true, 'Should return a set containing visited names.');
+        expect(result.size).to.equal(expectedVisitation.length, `Traversal from ${startName} to ${endName} should visit ${result.size} names`);
+        expect(outOfPlace.length).to.equal(0, `Traversal from ${startName} to ${endName} should visit ${outOfPlace}`);
 
-      expect(result).to.be.true;
-    });
+      });
 
-    it('the finds the path startName -> all other names -> endName despite cycles', () => {
-      const adjacencyList = {};
-      let startName;
-      let nameAfterStartName;
-      const endName = randomName();
-      for (let i = 0; i < names.length; i += 1) {
-        const name = names[i];
-        const previousName = names[(names.length + i - 1) % names.length];
-        const nextName = names[(i + 1) % names.length];
-        adjacencyList[name] = [previousName, nextName];
-        if (name === endName) {
-          startName = nextName;
-          nameAfterStartName = names[(i + 2) % names.length];
-        }
-      }
-      adjacencyList[startName] = [nameAfterStartName];
-
-      const result = areTheyConnected(adjacencyList, startName, endName);
-
-      expect(result).to.be.true;
-    });
-
-    it('the finds the path in a fully connected graph without timing out', () => {
-      const adjacencyList = {};
-      for (let i = 0; i < names.length; i += 1) {
-        adjacencyList[names[i]] = [...names];
-      }
-      const startName = randomName();
-      endName = names[names.length - 1];
-
-      const result = areTheyConnected(adjacencyList, startName, endName);
-
-      expect(result).to.be.true;
-    });
+    }
   });
+
+  context('returns null for unreachable paths on a large graph', () => {
+    const unconnected = [{'startName': 'Phuong', 'endName': 'Joanna'},
+                         {'startName': 'Bart', 'endName': 'Napoleon'},
+                         {'startName': 'Carolyn', 'endName': 'Fumiko'}];
+
+
+    for (let i = 0 ; i < unconnected.length ; i++) {
+      let expectedResult = unconnected[i];
+      let startName = expectedResult.startName;
+      let endName = expectedResult.endName;
+
+      it(`from ${startName} to ${endName}`, () => {
+
+        const result = areTheyConnected(largeAdjacencyList, startName, endName);
+
+        expect(result).to.equal(null, `Traversal from ${startName} to ${endName} should return null`);
+
+      });
+    }
+
+  });
+
 });
